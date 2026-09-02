@@ -1,4 +1,5 @@
-clear   close all    clc 
+clear; close all; clc
+
 %%
 D1 = 225e-3; % [m] G1
 D2 = 250e-3; % [m] G2
@@ -10,7 +11,6 @@ phi = 25; % [°]
 % Velocidade Periférica da Polia
 vp1.max = 2.75; % [m/s] v máxima na condição 1
 vp1.min = 1.57; % [m/s] v mínima na condição 1
-
 vp2 = 2.36; % [m/s] v na condição 2
 
 % Razão de força da Polia
@@ -33,57 +33,62 @@ l_d4 = 19e-3; % [m]
 l_d5 = 25e-3; % [m]
 
 % Coeficientes
+
 fs_e = 3.5; % fator de segurança mínimo do eixo
 fs_c = 1.6; % fator de segurança mínimo da chaveta
-
 P = 12.5 * 0.746; % [kW] Potência do motor
 
 % Deflexão máxima
+
 def_max = 90e-6; % [micrômetro]
 omega_p = vp2 / (Dp / 2); % [rad/s]
 
 % Cálculo do Torque em G2
+
 T_G2 = (P * 1000) / omega_p; % [N·m] Cálculo do Torque em G2
 Fp_n = T_G2 / (Dp / 2); % [N] Força resultante associada ao torque motor
-Fp_s = 1.5 * Fp_n;  % [N] Força que flete o eixo
+Fp_s = 1.5 * Fp_n; % [N] Força que flete o eixo
 F_polia = [1, -1; 1, -rfp]\[Fp_n; 0];
-
 Fg1_tang = T_G2/ (D1/2); % [N] Força tangencial do dente da engrenagem 1
 Fg2_tang = T_G2/ (D2/2); % [N] Força tangencial do dente da engrenagem 2
-
 Fg1_radial = Fg1_tang * tand(phi);
 Fg2_radial = Fg2_tang * tand(phi); % Força radial da engrenagem 2
 
 %% Cálculo das reações
 
-% Plano vertical 
-% Momento em tornono primeiro mancal
-syms Rmg2_vertical
-Fg2_tang*(l_d1+L2+L3+l_d3) + Rmg2_vertical*(l_d4+L4+L3+L2+l_d1) + Fp_s*(l_d5+L5+L4+L3+L2+l_d1) == 0;
+% Plano vertical
 
-% quero resolver
-% Resolver a equação para RG2:
+% Momento em tornono primeiro mancal
+
+% vertical para cima (Z+)
+
+syms Rmg2_vertical
+- Fg2_tang*(l_d1+L2+L3+l_d3) + Rmg2_vertical*(l_d4+L4+L3+L2+l_d1) - Fp_s*(l_d5+L5+L4+L3+L2+l_d1) == 0;
+
 % Fg2_tang*(l_d1+L2+L3+l_d3) + RG2*(l_d4+L4+L3+L2+l_d1) + Fp_s*(l_d5+L5+L4+L3+L2+l_d1) = 0
 
 A = (l_d4 + L4 + L3 + L2 + l_d1); % coeficiente de RG2
 B = Fg2_tang*(l_d1 + L2 + L3 + l_d3) + Fp_s*(l_d5 + L5 + L4 + L3 + L2 + l_d1); % termos conhecidos
-
-Rmg2_vertical = -B / A;
+Rmg2_vertical = B / A;
 
 % Somatório de forças eixo vertical
 syms Rmg1_vertical
+Rmg1_vertical - Fg2_tang + Rmg2_vertical - Fp_s == 0;
 
-Rmg1_vertical + Fg2_tang + Rmg2_vertical + Fp_s == 0;
 % Resolver a equação para RG1:
-Rmg1_vertical = -Fg2_tang - Rmg2_vertical - Fp_s;
+Rmg1_vertical = Fg2_tang - Rmg2_vertical + Fp_s;
 
-% Plano Y (Horizontal)
+%% Plano Y (Horizontal)
+% horizontal para a esquerda (Y+)
+
 % Momento em relação ao mancal 1
 syms Rmg2_radial
 Fg2_radial*(l_d1 + L2 + L3 + l_d3) + Rmg2_radial*(l_d4 + L4 + L3 + L2 + l_d1) == 0;
 Rmg2_radial = -Fg2_radial*(l_d1 + L2 + L3 + l_d3) / (l_d4 + L4 + L3 + L2 + l_d1);
 
-syms Rmg2_radial Rmg1_radial
+syms Rmg1_radial
 % Somatório de forças
+
 Fg2_radial + Rmg2_radial + Rmg1_radial == 0;
-Rmg1_radial = -Fg2_radial - Rmg2_radial; % Express Rmg1_radial in terms of Fg2_radial
+Rmg1_radial = -Fg2_radial - Rmg2_radial;  
+
