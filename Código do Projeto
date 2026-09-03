@@ -1,5 +1,4 @@
-clear; close all; clc
-
+clear   close all    clc 
 %%
 D1 = 225e-3; % [m] G1
 D2 = 250e-3; % [m] G2
@@ -11,6 +10,7 @@ phi = 25; % [°]
 % Velocidade Periférica da Polia
 vp1.max = 2.75; % [m/s] v máxima na condição 1
 vp1.min = 1.57; % [m/s] v mínima na condição 1
+
 vp2 = 2.36; % [m/s] v na condição 2
 
 % Razão de força da Polia
@@ -33,62 +33,152 @@ l_d4 = 19e-3; % [m]
 l_d5 = 25e-3; % [m]
 
 % Coeficientes
-
 fs_e = 3.5; % fator de segurança mínimo do eixo
 fs_c = 1.6; % fator de segurança mínimo da chaveta
+
 P = 12.5 * 0.746; % [kW] Potência do motor
 
 % Deflexão máxima
-
 def_max = 90e-6; % [micrômetro]
 omega_p = vp2 / (Dp / 2); % [rad/s]
 
 % Cálculo do Torque em G2
-
 T_G2 = (P * 1000) / omega_p; % [N·m] Cálculo do Torque em G2
 Fp_n = T_G2 / (Dp / 2); % [N] Força resultante associada ao torque motor
-Fp_s = 1.5 * Fp_n; % [N] Força que flete o eixo
+Fp_s = 1.5 * Fp_n;  % [N] Força que flete o eixo
 F_polia = [1, -1; 1, -rfp]\[Fp_n; 0];
+
 Fg1_tang = T_G2/ (D1/2); % [N] Força tangencial do dente da engrenagem 1
 Fg2_tang = T_G2/ (D2/2); % [N] Força tangencial do dente da engrenagem 2
+
 Fg1_radial = Fg1_tang * tand(phi);
 Fg2_radial = Fg2_tang * tand(phi); % Força radial da engrenagem 2
 
 %% Cálculo das reações
 
-% Plano vertical
-
+% Plano vertical 
 % Momento em tornono primeiro mancal
+% syms Rmg2_vertical
+%Fg2_tang*(l_d1+L2+L3+l_d3) + Rmg2_vertical*(l_d4+L4+L3+L2+l_d1) + Fp_s*(l_d5+L5+L4+L3+L2+l_d1) == 0;
 
-% vertical para cima (Z+)
-
-syms Rmg2_vertical
-- Fg2_tang*(l_d1+L2+L3+l_d3) + Rmg2_vertical*(l_d4+L4+L3+L2+l_d1) - Fp_s*(l_d5+L5+L4+L3+L2+l_d1) == 0;
-
-% Fg2_tang*(l_d1+L2+L3+l_d3) + RG2*(l_d4+L4+L3+L2+l_d1) + Fp_s*(l_d5+L5+L4+L3+L2+l_d1) = 0
+% quero resolver
+% Resolver a equação para RG2:
+% -Fg2_tang*(l_d1+L2+L3+l_d3) + RG2*(l_d4+L4+L3+L2+l_d1) - Fp_s*(l_d5+L5+L4+L3+L2+l_d1) = 0
 
 A = (l_d4 + L4 + L3 + L2 + l_d1); % coeficiente de RG2
 B = Fg2_tang*(l_d1 + L2 + L3 + l_d3) + Fp_s*(l_d5 + L5 + L4 + L3 + L2 + l_d1); % termos conhecidos
 Rmg2_vertical = B / A;
 
 % Somatório de forças eixo vertical
-syms Rmg1_vertical
-Rmg1_vertical - Fg2_tang + Rmg2_vertical - Fp_s == 0;
+%syms Rmg1_vertical
 
+% Rmg1_vertical - Fg2_tang + Rmg2_vertical - Fp_s == 0;
 % Resolver a equação para RG1:
 Rmg1_vertical = Fg2_tang - Rmg2_vertical + Fp_s;
 
-%% Plano Y (Horizontal)
-% horizontal para a esquerda (Y+)
-
+% Plano Y (Horizontal)
 % Momento em relação ao mancal 1
-syms Rmg2_radial
-Fg2_radial*(l_d1 + L2 + L3 + l_d3) + Rmg2_radial*(l_d4 + L4 + L3 + L2 + l_d1) == 0;
+% syms Rmg2_radial
+% Fg2_radial*(l_d1 + L2 + L3 + l_d3) + Rmg2_radial*(l_d4 + L4 + L3 + L2 + l_d1) == 0;
 Rmg2_radial = -Fg2_radial*(l_d1 + L2 + L3 + l_d3) / (l_d4 + L4 + L3 + L2 + l_d1);
 
-syms Rmg1_radial
+% syms Rmg2_radial Rmg1_radial
 % Somatório de forças
+% Fg2_radial + Rmg2_radial + Rmg1_radial == 0;
+Rmg1_radial = -Fg2_radial - Rmg2_radial; 
 
-Fg2_radial + Rmg2_radial + Rmg1_radial == 0;
-Rmg1_radial = -Fg2_radial - Rmg2_radial;  
+%% --- DIAGRAMAS DE ESFORÇO CORTANTE E MOMENTO FLETOR ---
 
+% 1. Posições dos elementos ao longo do eixo (Adotando Mancal 1 como x = 0)
+x_m1 = 0;                                     % Mancal 1
+x_g2 = l_d1 + L2 + L3 + l_d3;                 % Engrenagem G2
+x_m2 = l_d1 + L2 + L3 + L4 + l_d4;            % Mancal 2
+x_p  = l_d1 + L2 + L3 + L4 + L5 + l_d5;       % Polia
+L_total = L1 + L2 + L3 + L4 + L5 + L6;        % Comprimento total do eixo
+
+% 2. Definição da Função de Singularidade (Macaulay)
+% n = 0 (degrau) para esforço cortante
+% n = 1 (rampa linear) para momento fletor
+sing = @(x, a, n) (x >= a) .* ((x - a).^n);
+
+% Vetor de discretização ao longo do comprimento do eixo
+x = linspace(-L1, L_total, 2000); % Começa no início do eixo (-L1) e vai até o final
+
+% 3. Conversão de variáveis simbólicas para numéricas (necessário para plotar)
+R1V = (Rmg1_vertical);
+R2V = (Rmg2_vertical);
+R1H = (Rmg1_radial);
+R2H = (Rmg2_radial);
+F_G2T = (Fg2_tang);
+F_G2R = (Fg2_radial);
+F_P = (Fp_s);
+
+% 4. Equações de Esforço Cortante (V) usando Singularidade [N]
+% Plano Vertical (Z-X)
+V_z = R1V * sing(x, x_m1, 0) - F_G2T * sing(x, x_g2, 0) + ...
+    R2V * sing(x, x_m2, 0) - F_P * sing(x, x_p, 0);
+
+% Plano Horizontal (Y-X)
+V_y = R1H * sing(x, x_m1, 0) + F_G2R * sing(x, x_g2, 0) + ...
+    R2H * sing(x, x_m2, 0);
+
+% 5. Equações de Momento Fletor (M) usando Singularidade [N.m]
+% Plano Vertical (Z-X)
+M_z = R1V * sing(x, x_m1, 1) - F_G2T * sing(x, x_g2, 1) + ...
+    R2V * sing(x, x_m2, 1) - F_P * sing(x, x_p, 1);
+
+% Plano Horizontal (Y-X)
+M_y = R1H * sing(x, x_m1, 1) + F_G2R * sing(x, x_g2, 1) + ...
+    R2H * sing(x, x_m2, 1);
+
+% Momento Fletor Resultante (Usado no critério de falha)
+M_res = sqrt(M_z.^2 + M_y.^2);
+
+%% --- CÓDIGO PARA PLOTAGEM DOS GRÁFICOS ---
+
+figure('Name', 'Diagramas de Esforços do Eixo (Condição 2)', 'Position', [100, 100, 1200, 800]);
+
+% 1. Cortante Vertical (Plano Z)
+subplot(2, 2, 1);
+area(x, V_z, 'FaceColor', [0.7 0.8 1], 'EdgeColor', 'b', 'LineWidth', 1.5);
+title('Esforço Cortante - Plano Vertical (Z-X)');
+xlabel('Posição no eixo (m)'); ylabel('Cortante V_z (N)');
+grid on; hold on;
+plot(x, zeros(size(x)), 'k', 'LineWidth', 1); % Linha do zero
+
+% 2. Cortante Horizontal (Plano Y)
+subplot(2, 2, 2);
+area(x, V_y, 'FaceColor', [1 0.7 0.7], 'EdgeColor', 'r', 'LineWidth', 1.5);
+title('Esforço Cortante - Plano Horizontal (Y-X)');
+xlabel('Posição no eixo (m)'); ylabel('Cortante V_y (N)');
+grid on; hold on;
+plot(x, zeros(size(x)), 'k', 'LineWidth', 1); % Linha do zero
+
+% 3. Momento Fletor Vertical (Plano Z)
+subplot(2, 2, 3);
+area(x, M_z, 'FaceColor', [0.7 0.8 1], 'EdgeColor', 'b', 'LineWidth', 1.5);
+title('Momento Fletor - Plano Vertical (Z-X)');
+xlabel('Posição no eixo (m)'); ylabel('Momento M_z (N.m)');
+grid on; hold on;
+plot(x, zeros(size(x)), 'k', 'LineWidth', 1);
+
+% 4. Momento Fletor Horizontal (Plano Y)
+subplot(2, 2, 4);
+area(x, M_y, 'FaceColor', [1 0.7 0.7], 'EdgeColor', 'r', 'LineWidth', 1.5);
+title('Momento Fletor - Plano Horizontal (Y-X)');
+xlabel('Posição no eixo (m)'); ylabel('Momento M_y (N.m)');
+grid on; hold on;
+plot(x, zeros(size(x)), 'k', 'LineWidth', 1);
+
+% 5. Gráfico de Destaque: Momento Fletor Resultante (O mais importante para dimensionar o eixo)
+figure('Name', 'Momento Fletor Resultante Total', 'Position', [150, 150, 800, 400]);
+area(x, M_res, 'FaceColor', [0.8 0.9 0.8], 'EdgeColor', 'g', 'LineWidth', 1.5);
+title('Momento Fletor Resultante (M_{res})');
+xlabel('Posição no eixo (m)'); ylabel('Momento Resultante (N.m)');
+grid on; hold on;
+plot(x, zeros(size(x)), 'k', 'LineWidth', 1);
+
+% Mostrando o ponto de momento máximo
+[M_max, idx_max] = max(M_res);
+plot(x(idx_max), M_max, 'ro', 'MarkerSize', 8, 'MarkerFaceColor', 'r');
+text(x(idx_max), M_max*1.05, sprintf('  M_{max} = %.2f N.m', M_max), 'FontWeight', 'bold');
