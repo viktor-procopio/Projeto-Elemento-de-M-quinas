@@ -1,5 +1,8 @@
-clear   close all    clc 
-%%
+clear close clc
+Projeto Elementos de Máquinas
+Fase 1: Projeto de Eixo de Saída
+Dimensões de Projeto
+% Diâmetros das Engrenagens
 D1 = 225e-3; % [m] G1
 D2 = 250e-3; % [m] G2
 Dp = 150e-3; % [m] polia
@@ -40,17 +43,21 @@ P = 12.5 * 0.746; % [kW] Potência do motor
 
 % Deflexão máxima
 def_max = 90e-6; % [micrômetro]
+Projeto da Condição 2
+Chute da relação de diâmetros para Kt e Kts
+rDd = 2; % Relação Dedão (D/d) chutada
+Cálculo do Torque
+% Cálculo da velocidade angular da polia
 omega_p = vp2 / (Dp / 2); % [rad/s]
 
 % Cálculo do Torque em G2
 T_G2 = (P * 1000) / omega_p; % [N·m] Cálculo do Torque em G2
+Cálculo do momento fletor
 Fp_n = T_G2 / (Dp / 2); % [N] Força resultante associada ao torque motor
-Fp_s = 1.5 * Fp_n;  % [N] Força que flete o eixo
+Fp_s = 1.5 * Fp_n; % [N] Força que flete o eixo
 F_polia = [1, -1; 1, -rfp]\[Fp_n; 0];
-
 Fg1_tang = T_G2/ (D1/2); % [N] Força tangencial do dente da engrenagem 1
 Fg2_tang = T_G2/ (D2/2); % [N] Força tangencial do dente da engrenagem 2
-
 Fg1_radial = Fg1_tang * tand(phi);
 Fg2_radial = Fg2_tang * tand(phi); % Força radial da engrenagem 2
 
@@ -182,3 +189,27 @@ plot(x, zeros(size(x)), 'k', 'LineWidth', 1);
 [M_max, idx_max] = max(M_res);
 plot(x(idx_max), M_max, 'ro', 'MarkerSize', 8, 'MarkerFaceColor', 'r');
 text(x(idx_max), M_max*1.05, sprintf('  M_{max} = %.2f N.m', M_max), 'FontWeight', 'bold');
+Calcular o Se
+% Definir função anônima para Se (resistência à fadiga efetiva) dependendo de todas as variáveis
+Se_fun = @(C_carreg, C_tamanho, C_superf, C_temp, C_conf, Se_nom) ...
+    C_carreg .* C_tamanho .* C_superf .* C_temp .* C_conf .* Se_nom;
+
+C_carreg = 1;
+C_tamanho = 1;
+Csuperf = 0.8183;
+C_temp = 1;
+C_conf = 0.897;
+Se_nom = 313.5; % [MPa]
+% Cálculo da resistência à fadiga efetiva
+Se = Se_fun(C_carreg, C_tamanho, Csuperf, C_temp, C_conf, Se_nom)
+Calcular entalhe q
+raiz_a = 0.070 % [in^0.5]
+% Converter raiz_a de [in^0.5] para [m^0.5]
+in_to_m = 0.0254; % 1 inch = 0.0254 m
+raiz_a = raiz_a * sqrt(in_to_m); % [m^0.5]
+
+q = 1 / (1 + ( raiz_a / sqrt(res))) % fator de sensibilidade ao entalhe
+
+Kf = @(Kt) 1 + q .* (Kt - 1) % fator de concentração de tensão dinâmica
+
+
