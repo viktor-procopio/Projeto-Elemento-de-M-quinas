@@ -3,7 +3,6 @@ clear; close all; clc;
 % Projeto Elementos de Máquinas                                           %
 % Fase 1: Projeto de Eixo de Saída                                        %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 % --- DIMENSÕES DE PROJETO ---
 D1 = 225e-3; % [m] G1
 D2 = 250e-3; % [m] G2
@@ -15,14 +14,13 @@ rfp = 5;     % Razão de força da Polia
 % Comprimentos
 L1 = 95e-3; L2 = 125e-3; L3 = 150e-3; L4 = 120e-3; L5 = 100e-3; L6 = 60e-3;
 l_d1 = 19e-3; l_d2 = 23e-3; l_d3 = 16e-3; l_d4 = 19e-3; l_d5 = 25e-3;
-
 fs_e = 3.5; % fator de segurança mínimo do eixo
 P = 12.5 * 0.746; % [kW] Potência do motor
 def_max = 90e-6; % [micrômetro] Deflexão máxima
 
 % --- CÁLCULO DE ESFORÇOS ---
 omega_p = vp2 / (Dp / 2); 
-T_G2 = (P * 1000) / omega_p; 
+T_G2 = (P * 1000) / omega_p; %[Nm]
 Fp_n = T_G2 / (Dp / 2); 
 Fp_s = 1.5 * Fp_n; 
 Fg2_tang = T_G2 / (D2 / 2); 
@@ -115,15 +113,13 @@ y_bruto = cumtrapz(x, theta_bruto);
 % Índices dos mancais para zerar a deflexão neles
 idx_A = find(x >= x_m1, 1);
 idx_B = find(x >= x_m2, 1);
-
 C1 = - (y_bruto(idx_B) - y_bruto(idx_A)) / (x(idx_B) - x(idx_A));
 C2 = - y_bruto(idx_A) - C1 * x(idx_A);
 y_final = y_bruto + C1 .* x + C2;
-
 deflexao_maxima = max(abs(y_final)) * 1e6; 
+
 fprintf('\n=== ANÁLISE DE RIGIDEZ INICIAL ===\n');
 fprintf('Deflexão máxima calculada: %.2f µm\n', deflexao_maxima);
-
 figure('Name', 'Linha Elástica do Eixo');
 plot(x, y_final * 1000, 'r', 'LineWidth', 2);
 title('Linha Elástica (Deflexão Transversal)');
@@ -134,7 +130,6 @@ hold on; plot([x_m1, x_m2], [0, 0], 'k^', 'MarkerSize', 10, 'MarkerFaceColor', '
 if deflexao_maxima > def_max * 1e6
     fprintf('\n=== RECALCULANDO DIÂMETROS PARA RIGIDEZ ===\n');
     
-    % Fator com margem de 3% (1.03) para absorver perdas por degraus fixos
     Kd = 1.03 * (deflexao_maxima / (def_max * 1e6))^(1/4);
     fprintf('Fator de escala aplicado: %.3f\n\n', Kd);
     
@@ -157,7 +152,6 @@ if deflexao_maxima > def_max * 1e6
     fprintf('D4 = %.2f mm\n', D4_final * 1000);
     fprintf('D6 = %.2f mm\n', D6_final * 1000);
     
-    % Recálculo com novos diâmetros
     D_vetor_rig = zeros(size(x));
     D_vetor_rig(x <= b1) = D1_final;
     D_vetor_rig(x > b1 & x <= b2) = D2_final;
@@ -190,6 +184,56 @@ if deflexao_maxima > def_max * 1e6
     plot(x, y_final_rig * 1000, 'b--', 'LineWidth', 2);
     legend('Deflexão Inicial (Falha)', 'Mancais', 'Deflexão Corrigida (Segura)');
 end
+
+% =========================================================================
+% DIMENSIONAMENTO DA CHAVETA - CONDIÇÃO 2 (CARREGAMENTO ESTÁTICO)
+% =========================================================================
+
+% --- PROPRIEDADES DO MATERIAL DA CHAVETA (Aço SAE 1020) ---
+Sy_1020 = 393e6;                  % [Pa] Resistência ao escoamento
+Ssy_1020 = 0.577 * Sy_1020;       % [Pa] Escoamento por cisalhamento (Von Mises)
+
+% --- GEOMETRIA E SEÇÃO DE MONTAGEM ---
+D_eixo = D2_final;                % [m] Diâmetro da seção da engrenagem G2
+
+% Dimensões Padronizadas (DIN 6885 para eixos entre 75 e 85 mm)
+w_chaveta = 22e-3;                % [m] Largura nominal (b)
+h_chaveta = 14e-3;                % [m] Altura nominal (h)
+
+% Comprimento útil da chaveta (Limitado ao cubo correspondente)
+l_cubo = l_d3;                    % [m] Usando l_d3 como comprimento do cubo da Engrenagem 2
+l_chaveta = 0.90 * l_cubo;        % [m] Adotando 90% do comprimento do cubo
+
+% --- SOLICITAÇÕES E TENSÕES ---
+% 1. Força Tangencial na Chaveta (Carga Estática)
+F_chaveta = T_G2 / (D_eixo / 2);  % [N]
+
+% 2. Verificação ao Cisalhamento (Corte)
+A_cis = w_chaveta * l_chaveta;    % [m²] Área de corte
+tau_chaveta = F_chaveta / A_cis;  % [Pa] Tensão cortante atuante
+N_cis = Ssy_1020 / tau_chaveta;   % Fator de segurança ao cisalhamento
+
+% 3. Verificação ao Esmagamento (Compressão Lateral)
+A_esm = (h_chaveta / 2) * l_chaveta; % [m²] Área de contato lateral flancada
+sigma_esm = F_chaveta / A_esm;       % [Pa] Tensão de esmagamento atuante
+N_esm = Sy_1020 / sigma_esm;         % Fator de segurança ao esmagamento
+
+% --- SAÍDA DOS RESULTADOS ---
+fprintf('\n===================================================\n');
+fprintf('   VERIFICAÇÃO DA CHAVETA - CONDIÇÃO 2 (ESTÁTICO)  \n');
+fprintf('===================================================\n');
+fprintf('Torque Solicitante (T_G2):         %.2f Nm\n', T_G2);
+fprintf('Força Tangencial Atuante (F):      %.2f N\n', F_chaveta);
+fprintf('Dimensões (w x h x l):            %.1f x %.1f x %.1f mm\n', ...
+        w_chaveta*1000, h_chaveta*1000, l_chaveta*1000);
+fprintf('---------------------------------------------------\n');
+fprintf('Tensão de Cisalhamento (tau):      %.2f MPa\n', tau_chaveta / 1e6);
+fprintf('Fator de Seg. (Cisalhamento):      %.2f\n', N_cis);
+fprintf('---------------------------------------------------\n');
+fprintf('Tensão de Esmagamento (sigma):     %.2f MPa\n', sigma_esm / 1e6);
+fprintf('Fator de Seg. (Esmagamento):       %.2f\n', N_esm);
+fprintf('===================================================\n');
+
 
 % =========================================================================
 % FUNÇÃO LOCAL: CÁLCULO ITERATIVO À FADIGA
