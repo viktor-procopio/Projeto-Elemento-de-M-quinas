@@ -1,4 +1,4 @@
-Sclear; close all; clc;
+clear; close all; clc;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Projeto Elementos de Máquinas                                           %
 % Fase 2: Projeto de Mancais (Mancal Magnético)                           %
