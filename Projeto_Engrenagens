@@ -1,1 +1,262 @@
+% =========================================================================
+% UNIVERSIDADE ESTADUAL DE CAMPINAS - FEM / DSI
+% EM608 - Elementos de Máquinas / ES690 - Sistemas Mecânicos
+% PROJETO DE ENGRENAGENS - FASE 3: ANÁLISE DINÂMICA DA CONDIÇÃO 1
+% =========================================================================
+% Descrição: Dimensionamento geométrico, cinemático e análise dinâmica do
+% Par Engrenado 1 (Pinhão P1 e Coroa G1) sob variação cíclica de velocidade.
+% =========================================================================
 
+clear; clc; close all;
+
+fprintf('=========================================================================\n');
+fprintf(' EM608/ES690 - PROJETO DE ENGRENAGENS MECÂNICAS (FASE 3)\n');
+fprintf(' ANÁLISE DINÂMICA E DIMENSIONAMENTO - CONDIÇÃO 1\n');
+fprintf('=========================================================================\n\n');
+
+%% 1. DADOS DE ENTRADA DO PROJETO (INPUTS)
+% -------------------------------------------------------------------------
+% Especificações do Motor e Sistema
+P_hp = 12.5; % Potência do motor elétrico [HP]
+P_W = P_hp * 745.7; % Potência em Watts [W] (9321.25 W)
+phi_deg = 25.0; % Ângulo de pressão [graus]
+phi = deg2rad(phi_deg); % Ângulo de pressão [rad]
+
+% Condição 1: Par Engrenado 1 (Pinhão P1 e Coroa G1)
+D_pG1_mm = 225.0; % Diâmetro primitivo da coroa G1 [mm]
+D_pG1 = D_pG1_mm / 1000; % [m]
+N_P1 = 60; % Número de dentes do pinhão P1
+m_a = 1.25; % Razão de torque requerida (m_a = m_G1)
+m_G1 = m_a; % Razão de engrenamento do par 1
+
+% Variação Cíclica da Velocidade Periférica da Polia
+v_min = 1.57; % Velocidade tangencial mínima [m/s]
+v_max = 2.75; % Velocidade tangencial máxima [m/s]
+v_med = (v_min + v_max)/2; % Velocidade tangencial média [m/s] (2.16 m/s)
+
+% Propriedades do Material: Aço 1020 AGMA Grau 2 (350 HB)
+E_Pa = 205e9; % Módulo de elasticidade [Pa]
+nu = 0.30; % Coeficiente de Poisson
+HB = 350; % Dureza Brinell do primeiro par
+
+% Vida em Serviço Requerida
+anos = 3; % Vida requerida [anos]
+dias_ano = 364; % 365 dias - 1 dia de parada anual para manutenção
+horas_dia = 16; % Operação de 2 turnos (16h/dia)
+horas_totais = anos * dias_ano * horas_dia; % Horas totais (17472 h)
+T_op = 220; % Temperatura de operação [°F] (< 250 °F)
+confiabilidade = 99.9; % Confiabilidade requerida [%]
+
+%% 2. DIMENSIONAMENTO GEOMÉTRICO DO PAR ENGRENADO 1 (TABELA 1)
+% -------------------------------------------------------------------------
+N_G1 = round(N_P1 * m_G1); % Número de dentes da coroa G1 (75 dentes)
+m_mm = D_pG1_mm / N_G1; % Módulo métrico [mm] (3.0 mm)
+m = m_mm / 1000; % Módulo [m]
+p_d_in = 25.4 / m_mm; % Passo diametral [dentes/pol] (8.467 in^-1)
+
+D_pP1_mm = N_P1 * m_mm; % Diâmetro primitivo do pinhão P1 [mm] (180 mm)
+D_pP1 = D_pP1_mm / 1000; % [m]
+
+r_p_mm = D_pP1_mm / 2; % Raio primitivo do pinhão [mm] (90 mm)
+r_g_mm = D_pG1_mm / 2; % Raio primitivo da coroa [mm] (112.5 mm)
+
+C1_mm = r_p_mm + r_g_mm; % Distância entre centros C1 [mm] (202.5 mm)
+C1 = C1_mm / 1000; % [m]
+
+% Proporções dos dentes padronizados AGMA (25°, profundidade completa, x_p = 0)
+a_mm = 1.00 * m_mm; % Adendo [mm] (3.0 mm)
+b_mm = 1.25 * m_mm; % Dedendo [mm] (3.75 mm)
+h_mm = 2.25 * m_mm; % Altura total do dente [mm] (6.75 mm)
+c_mm = 0.25 * m_mm; % Folga na raiz [mm] (0.75 mm)
+
+D_eP1_mm = D_pP1_mm + 2*a_mm; % Diâmetro externo do pinhão P1 [mm] (186 mm)
+D_eG1_mm = D_pG1_mm + 2*a_mm; % Diâmetro externo da coroa G1 [mm] (231 mm)
+
+% Comprimento da Linha de Ação Z [mm]
+r_p = r_p_mm / 1000;
+r_g = r_g_mm / 1000;
+a = a_mm / 1000;
+
+Z_m = sqrt((r_p + a)^2 - (r_p*cos(phi))^2) + ...
+      sqrt((r_g + a)^2 - (r_g*cos(phi))^2) - C1*sin(phi);
+Z_mm = Z_m * 1000; % Comprimento da linha de ação [mm] (13.36 mm)
+
+p_b_mm = pi * m_mm * cos(phi); % Passo de base [mm] (8.54 mm)
+m_p = Z_mm / p_b_mm; % Razão de contato (1.56)
+
+% Largura de Face F [mm] (Ajustada para atender N_b em [7, 8] e N_c em [1.5, 2.5])
+F_mm = 45.0; % Largura de face [mm]
+F = F_mm / 1000; % [m]
+
+%% 3. PROPRIEDADES DE FADIGA E FATORES CORRETIVOS AGMA
+% -------------------------------------------------------------------------
+% Coeficiente Elástico Cp (SI: MPa^0.5)
+Cp = sqrt(E_Pa / (2 * pi * (1 - nu^2))) / 1e3; % ~ 189.34 MPa^0.5
+
+% Fatores Geométricos AGMA (25°, HPSTC, profundidade completa)
+J_P = 0.52; % Pinhão P1 (NP = 60)
+J_G = 0.54; % Coroa G1 (NG = 75)
+
+% Fator Geométrico de Superfície I
+rho_p = sqrt((r_p + a)^2 - (r_p*cos(phi))^2) - pi*m*cos(phi);
+rho_g = C1*sin(phi) - rho_p;
+I_factor = cos(phi) / ((1/rho_p + 1/rho_g) * D_pP1); % ~ 0.1051
+
+% Fatores Modificadores da Tensão
+K_a = 1.0; % Fator de aplicação (Motor Elétrico + Carga Uniforme)
+K_m = 1.6; % Fator de distribuição de carga (F <= 50 mm)
+K_s = 1.0; % Fator de tamanho
+K_B = 1.0; % Fator de espessura da borda (disco sólido)
+K_I = 1.0; % Fator IDLER (engrenagem não intermediária)
+C_f = 1.0; % Fator de acabamento superficial
+
+% Resistência Não Corrigida (AGMA Grau 2, 350 HB)
+S_fb_psi = 6235 + 174*HB - 0.126*(HB^2); % ~ 51700 psi
+S_fb_prime = S_fb_psi / 145.038; % ~ 356.46 MPa (flexão)
+
+S_fc_psi = 27000 + 364*HB; % ~ 154400 psi
+S_fc_prime = S_fc_psi / 145.038; % ~ 1064.55 MPa (superfície)
+
+% Rotação Média e Número de Ciclos
+omega_G1_med = v_med / r_g; % [rad/s]
+rpm_G1_med = omega_G1_med * 30 / pi; % [rpm] (183.3 rpm)
+rpm_P1_med = rpm_G1_med * m_G1; % [rpm] (229.2 rpm)
+
+N_ciclos_P1 = rpm_P1_med * 60 * horas_totais; % ~ 2.40e8 ciclos
+N_ciclos_G1 = rpm_G1_med * 60 * horas_totais; % ~ 1.92e8 ciclos
+
+% Fatores de Vida KL e CL (Aplicações Comerciais)
+K_L_P = 1.3558 * (N_ciclos_P1)^(-0.0178);
+K_L_G = 1.3558 * (N_ciclos_G1)^(-0.0178);
+C_L_P = 1.4488 * (N_ciclos_P1)^(-0.023);
+
+% Fatores de Temperatura, Confiabilidade e Dureza
+K_T = 1.0; % T_op = 220°F < 250°F
+C_T = 1.0;
+K_R = 1.25; % Confiabilidade de 99.9%
+C_R = 1.25;
+C_H = 1.0; % Mesma dureza no pinhão e na coroa
+
+% Resistências Corrigidas à Fadiga [MPa]
+S_fb_P = (K_L_P / (K_T * K_R)) * S_fb_prime; % Pinhão (~ 274.23 MPa)
+S_fb_G = (K_L_G / (K_T * K_R)) * S_fb_prime; % Coroa (~ 275.32 MPa)
+S_fc = ((C_L_P * C_H) / (C_T * C_R)) * S_fc_prime; % Superfície (~ 791.60 MPa)
+
+%% 4. ANÁLISE DINÂMICA CÍCLICA (CONDIÇÃO 1)
+% -------------------------------------------------------------------------
+% Índice de Qualidade: Q_v = 6 (valor mínimo adequado para a faixa de velocidade)
+Q_v = 6;
+B_qv = ((12 - Q_v)^(2/3)) / 4;
+A_qv = 50 + 56 * (1 - B_qv);
+
+% Simulação Cíclica no Tempo (1 Período de Oscilação)
+t_fase = linspace(0, 2*pi, 200); % Fase do ciclo [rad]
+v_t = v_med + ((v_max - v_min)/2) * sin(t_fase); % Velocidade tangencial instantânea [m/s]
+
+% Força Tangencial Instantânea Wt [N]
+W_t = P_W ./ v_t;
+
+% Fator Dinâmico Instantâneo Kv (AGMA SI)
+K_v = (A_qv ./ (A_qv + sqrt(200 .* v_t))).^B_qv;
+
+% Tensões Instantâneas [MPa]
+sigma_bP = (W_t ./ (F_mm * m_mm * J_P)) .* (K_a * K_m ./ K_v);
+sigma_bG = (W_t ./ (F_mm * m_mm * J_G)) .* (K_a * K_m ./ K_v);
+sigma_c = Cp .* sqrt((W_t ./ (F_mm * I_factor * D_pP1_mm)) .* (K_a * K_m ./ K_v));
+
+% Coeficientes de Segurança Instantâneos
+N_bP = S_fb_P ./ sigma_bP;
+N_bG = S_fb_G ./ sigma_bG;
+N_c = (S_fc ./ sigma_c).^2;
+
+%% 5. SAÍDA DE RESULTADOS NO COMMAND WINDOW (TABELAS 1 E 2)
+% -------------------------------------------------------------------------
+fprintf('-------------------------------------------------------------------------\n');
+fprintf('TABELA 1 - RESULTADOS DO DIMENSIONAMENTO GEOMÉTRICO (PAR ENGRENADO 1)\n');
+fprintf('-------------------------------------------------------------------------\n');
+fprintf('Razão de Engrenamento (m_G) : %.4f\n', m_G1);
+fprintf('Módulo Métrico (m)          : %.2f mm\n', m_mm);
+fprintf('Passo Diametral (p_d)       : %.4f in^-1\n', p_d_in);
+fprintf('Adendo (a)                  : %.2f mm\n', a_mm);
+fprintf('Dedendo (b)                 : %.2f mm\n', b_mm);
+fprintf('Profundidade Total (h)      : %.2f mm\n', h_mm);
+fprintf('Folga na Raiz (c)           : %.2f mm\n', c_mm);
+fprintf('Número de Dentes Pinhão P1 (N_P1) : %d\n', N_P1);
+fprintf('Número de Dentes Coroa G1 (N_G1)  : %d\n', N_G1);
+fprintf('Diâmetro Primitivo Pinhão (D_pP1) : %.2f mm (%.4f m)\n', D_pP1_mm, D_pP1);
+fprintf('Diâmetro Primitivo Coroa (D_pG1)  : %.2f mm (%.4f m)\n', D_pG1_mm, D_pG1);
+fprintf('Diâmetro Externo Pinhão (D_eP1)   : %.2f mm\n', D_eP1_mm);
+fprintf('Diâmetro Externo Coroa (D_eG1)    : %.2f mm\n', D_eG1_mm);
+fprintf('Distância entre Centros (C1)      : %.2f mm (%.4f m)\n', C1_mm, C1);
+fprintf('Comprimento da Linha de Ação (Z)  : %.2f mm\n', Z_mm);
+fprintf('Razão de Contato (m_p)            : %.4f\n', m_p);
+fprintf('Faixa de Velocidade Tangencial (V_t): %.2f a %.2f m/s\n', v_min, v_max);
+fprintf('Índice de Qualidade (Q_v)         : %d\n', Q_v);
+fprintf('Largura de Face do Dente (F)      : %.2f mm\n', F_mm);
+fprintf('-------------------------------------------------------------------------\n\n');
+
+[~, idx_min] = min(v_t);
+[~, idx_max] = max(v_t);
+idx_med = round(length(t_fase)/4);
+
+fprintf('-------------------------------------------------------------------------\n');
+fprintf('TABELA 2 - RESUMO DA ANÁLISE DINÂMICA DO PAR ENGRENADO 1 (CONDIÇÃO 1)\n');
+fprintf('-------------------------------------------------------------------------\n');
+fprintf('Parâmetro                          | V_t Mínima | V_t Média  | V_t Máxima \n');
+fprintf('-------------------------------------------------------------------------\n');
+fprintf('Velocidade Tangencial V_t [m/s]    | %10.2f | %10.2f | %10.2f \n', v_t(idx_min), v_t(idx_med), v_t(idx_max));
+fprintf('Carga Tangencial W_t [N]           | %10.2f | %10.2f | %10.2f \n', W_t(idx_min), W_t(idx_med), W_t(idx_max));
+fprintf('Fator Dinâmico K_v                 | %10.4f | %10.4f | %10.4f \n', K_v(idx_min), K_v(idx_med), K_v(idx_max));
+fprintf('Tensão Flexão Pinhão sigma_bP [MPa]| %10.2f | %10.2f | %10.2f \n', sigma_bP(idx_min), sigma_bP(idx_med), sigma_bP(idx_max));
+fprintf('Tensão Flexão Coroa sigma_bG [MPa] | %10.2f | %10.2f | %10.2f \n', sigma_bG(idx_min), sigma_bG(idx_med), sigma_bG(idx_max));
+fprintf('Tensão Superficial sigma_c [MPa]   | %10.2f | %10.2f | %10.2f \n', sigma_c(idx_min), sigma_c(idx_med), sigma_c(idx_max));
+fprintf('Coef. Segurança Flexão Pinhão N_bP | %10.2f | %10.2f | %10.2f \n', N_bP(idx_min), N_bP(idx_med), N_bP(idx_max));
+fprintf('Coef. Segurança Flexão Coroa N_bG  | %10.2f | %10.2f | %10.2f \n', N_bG(idx_min), N_bG(idx_med), N_bG(idx_max));
+fprintf('Coef. Segurança Superfície N_c     | %10.2f | %10.2f | %10.2f \n', N_c(idx_min), N_c(idx_med), N_c(idx_max));
+fprintf('-------------------------------------------------------------------------\n');
+
+%% 6. GRÁFICOS DA ANÁLISE DINÂMICA
+% -------------------------------------------------------------------------
+figure('Name', 'Análise Dinâmica da Condição 1 - Par Engrenado 1', 'Color', 'w');
+
+% Gráfico 1: Variação da Velocidade e Carga Transmitida
+subplot(3, 1, 1);
+yyaxis left;
+plot(t_fase, v_t, 'b-', 'LineWidth', 2);
+ylabel('Velocidade V_t [m/s]');
+ylim([1.4, 3.0]);
+grid on;
+
+yyaxis right;
+plot(t_fase, W_t, 'r--', 'LineWidth', 2);
+ylabel('Carga Tangencial W_t [N]');
+xlabel('Fase do Ciclo de Operação [rad]');
+title('Variação Cíclica da Velocidade Tangencial (V_t) e Carga Transmitida (W_t)');
+
+% Gráfico 2: Tensões de Flexão e Superfície
+subplot(3, 1, 2);
+plot(t_fase, sigma_bP, 'b-', 'LineWidth', 2);
+hold on;
+plot(t_fase, sigma_bG, 'm--', 'LineWidth', 1.8);
+plot(t_fase, sigma_c, 'r-.', 'LineWidth', 2);
+ylabel('Tensão [MPa]');
+xlabel('Fase do Ciclo de Operação [rad]');
+title('Tensões Dinâmicas Flutuantes no Dente (Flexão e Superfície)');
+legend('\sigma_{bP} (Flexão Pinhão)', '\sigma_{bG} (Flexão Coroa)', '\sigma_c (Superfície)', 'Location', 'northeast');
+grid on;
+
+% Gráfico 3: Coeficientes de Segurança
+subplot(3, 1, 3);
+plot(t_fase, N_bP, 'b-', 'LineWidth', 2);
+hold on;
+plot(t_fase, N_bG, 'm--', 'LineWidth', 1.8);
+plot(t_fase, N_c, 'g-.', 'LineWidth', 2);
+yline(2.0, 'k--', 'Mínimo Requerido N_b = 2.0');
+yline(3.0, 'k--', 'Máximo Requerido N_b = 3.0');
+yline(1.5, 'r:', 'Mínimo Requerido N_c = 1.5');
+yline(2.5, 'r:', 'Máximo Requerido N_c = 2.5');
+ylabel('Fator de Segurança');
+xlabel('Fase do Ciclo de Operação [rad]');
+title('Fatores de Segurança Instantâneos à Fadiga (N_b e N_c)');
+legend('N_{bP} (Flexão Pinhão)', 'N_{bG} (Flexão Coroa)', 'N_c (Superfície)', 'Location', 'southeast');
+grid on;
